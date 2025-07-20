@@ -1,9 +1,10 @@
 "use client";
 import React, { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { ArrowRight, Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SignUpButton } from "@clerk/nextjs";
 import { SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
+import Link from "next/link";
 
 interface NavigationProps {
   menuVariant: {
@@ -60,6 +61,9 @@ export default function Navigation({ menuVariant }: NavigationProps) {
               </button>
             </SignedOut>
             <SignedIn>
+            <Link href="/dashboard" className="bg-gradient-to-r flex items-center gap-2 from-purple-600 to-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 cursor-pointer shadow-lg hover:shadow-purple-500/25">
+                Dashboard <ArrowRight />
+              </Link>
               <UserButton />
             </SignedIn>
           </div>
