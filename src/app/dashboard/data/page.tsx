@@ -44,7 +44,7 @@ interface Dataset {
   fileType: string
   fileSize: number
   columns: string[]
-  rows: Record<string, unknown>[]
+  rows: number
   cloudinaryUrl: string
   createdAt: string
 }
@@ -200,84 +200,13 @@ const DataPage = () => {
 
   const handleDownloadFile = async (dataset: Dataset) => {
     try {
-      // Get the dataset data
-      const response = await axios.get(`/api/datasets/${dataset._id}`)
-      const datasetData = response.data.dataset
-
-      // Convert data to appropriate format based on file type
-      let content: string
-      let filename: string
-
-      if (dataset.fileType.toLowerCase() === 'csv') {
-        // Convert to CSV
-        const headers = datasetData.columns.join(',')
-        
-        // Ensure rows is an array and handle different data structures
-        let rows = datasetData.rows
-        if (!Array.isArray(rows)) {
-          // If rows is not an array, try to convert it
-          if (typeof rows === 'object' && rows !== null) {
-            // If it's an object with numeric keys, convert to array
-            const keys = Object.keys(rows).sort((a, b) => parseInt(a) - parseInt(b))
-            rows = keys.map(key => rows[key])
-          } else {
-            // If it's not an object or is null, use empty array
-            rows = []
-          }
-        }
-        
-        const csvRows = rows.map((row: Record<string, unknown>) => 
-          datasetData.columns.map((col: string) => {
-            const value = row[col]
-            // Escape quotes and wrap in quotes if contains comma or newline
-            const stringValue = String(value || '')
-            if (stringValue.includes(',') || stringValue.includes('\n') || stringValue.includes('"')) {
-              return `"${stringValue.replace(/"/g, '""')}"`
-            }
-            return stringValue
-          }).join(',')
-        ).join('\n')
-        content = `${headers}\n${csvRows}`
-        filename = dataset.name.endsWith('.csv') ? dataset.name : `${dataset.name}.csv`
-      } else if (dataset.fileType.toLowerCase() === 'json') {
-        // Convert to JSON
-        let rows = datasetData.rows
-        if (!Array.isArray(rows)) {
-          // If rows is not an array, try to convert it
-          if (typeof rows === 'object' && rows !== null) {
-            // If it's an object with numeric keys, convert to array
-            const keys = Object.keys(rows).sort((a, b) => parseInt(a) - parseInt(b))
-            rows = keys.map(key => rows[key])
-          } else {
-            // If it's not an object or is null, use empty array
-            rows = []
-          }
-        }
-        content = JSON.stringify(rows, null, 2)
-        filename = dataset.name.endsWith('.json') ? dataset.name : `${dataset.name}.json`
-      } else {
-        // For Excel files, we'll download the original file from Cloudinary
-        const cloudinaryResponse = await fetch(dataset.cloudinaryUrl)
-        const blob = await cloudinaryResponse.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = dataset.name
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        window.URL.revokeObjectURL(url)
-        return
-      }
-
-      // Create and download the file
-      const blob = new Blob([content], { 
-        type: dataset.fileType.toLowerCase() === 'csv' ? 'text/csv' : 'application/json' 
-      })
+      // For all file types, download the original file from Cloudinary
+      const cloudinaryResponse = await fetch(dataset.cloudinaryUrl)
+      const blob = await cloudinaryResponse.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = filename
+      a.download = dataset.name
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -355,7 +284,7 @@ const DataPage = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {datasets.reduce((sum, dataset) => sum + (dataset.rows?.length || 0), 0).toLocaleString()}
+              {datasets.reduce((sum, dataset) => sum + (dataset.rows || 0), 0).toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
               Across all files
@@ -457,7 +386,7 @@ const DataPage = () => {
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span>{formatFileSize(dataset.fileSize || 0)}</span>
-                        <span>{(dataset.rows?.length || 0).toLocaleString()} records</span>
+                        <span>{(dataset.rows || 0).toLocaleString()} records</span>
                         <span>{dataset.columns?.length || 0} columns</span>
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />

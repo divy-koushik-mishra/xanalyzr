@@ -6,7 +6,7 @@ export interface Dataset extends Document {
     fileType: string
     fileSize: number
     columns: string[]
-    rows: Record<string, unknown>[]
+    rows: number
     cloudinaryUrl: string
     cloudinaryPublicId: string
     createdAt: Date
@@ -19,7 +19,7 @@ const datasetSchema = new Schema<Dataset>({
     fileType: {type: String, required: true},
     fileSize: {type: Number, required: true},
     columns: {type: [String], required: true},
-    rows: {type: Schema.Types.Mixed, required: true},
+    rows: {type: Number, required: true},
     cloudinaryUrl: {type: String, required: true},
     cloudinaryPublicId: {type: String, required: true},
     createdAt: {type: Date, default: Date.now},

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -15,18 +15,14 @@ import {
   Tooltip, 
   Legend, 
   ResponsiveContainer,
-
   AreaChart,
   Area,
   PieChart,
   Pie,
   Cell,
-
 } from "recharts"
 import { 
-
   TrendingUp,
-
   FileText,
   FileSpreadsheet,
   FileJson,
@@ -44,139 +40,89 @@ import {
 } from "lucide-react"
 import axios from 'axios'
 
-// Mock data for dashboard
-const mockFiles = [
-  {
-    id: 1,
-    name: "sales_data_2024.csv",
-    type: "csv",
-    size: "2.4 MB",
-    uploadedAt: "2024-01-15",
-    status: "processed",
-    records: 15420,
-    lastAnalyzed: "2024-01-15 14:30"
-  },
-  {
-    id: 2,
-    name: "customer_analytics.xlsx",
-    type: "excel",
-    size: "1.8 MB",
-    uploadedAt: "2024-01-14",
-    status: "processed",
-    records: 8920,
-    lastAnalyzed: "2024-01-14 09:15"
-  },
-  {
-    id: 3,
-    name: "product_inventory.json",
-    type: "json",
-    size: "856 KB",
-    uploadedAt: "2024-01-13",
-    status: "processing",
-    records: 3240,
-    lastAnalyzed: null
-  },
-  {
-    id: 4,
-    name: "marketing_campaign.csv",
-    type: "csv",
-    size: "3.1 MB",
-    uploadedAt: "2024-01-12",
-    status: "processed",
-    records: 21850,
-    lastAnalyzed: "2024-01-12 16:45"
+// Types for analytics data
+interface Dataset {
+  id: string
+  name: string
+  fileType: string
+  fileSize: number
+  records: number
+  columns: number
+  createdAt: string
+  status: string
+}
+
+interface AnalyticsData {
+  overview: {
+    totalFiles: number
+    totalRecords: number
+    totalSize: number
+    recentUploads: number
+    processedFiles: number
   }
-]
-
-// Analytics data
-const dataUsageData = [
-  { month: 'Jan', files: 12, records: 45000, storage: 45 },
-  { month: 'Feb', files: 18, records: 67000, storage: 67 },
-  { month: 'Mar', files: 15, records: 52000, storage: 52 },
-  { month: 'Apr', files: 22, records: 89000, storage: 89 },
-  { month: 'May', files: 28, records: 120000, storage: 120 },
-  { month: 'Jun', files: 35, records: 156000, storage: 156 },
-]
-
-const fileTypeData = [
-  { name: 'CSV Files', value: 45, color: '#3b82f6' },
-  { name: 'Excel Files', value: 35, color: '#10b981' },
-  { name: 'JSON Files', value: 20, color: '#f59e0b' },
-]
-
-const processingTrendData = [
-  { day: 'Mon', processed: 12, failed: 1, pending: 3 },
-  { day: 'Tue', processed: 15, failed: 0, pending: 2 },
-  { day: 'Wed', processed: 18, failed: 2, pending: 5 },
-  { day: 'Thu', processed: 14, failed: 1, pending: 4 },
-  { day: 'Fri', processed: 20, failed: 0, pending: 1 },
-  { day: 'Sat', processed: 8, failed: 1, pending: 2 },
-  { day: 'Sun', processed: 6, failed: 0, pending: 1 },
-]
-
-const recentActivity = [
-  {
-    id: 1,
-    type: 'upload',
-    file: 'financial_reports.xlsx',
-    user: 'John Doe',
-    time: '2 minutes ago',
-    status: 'success'
-  },
-  {
-    id: 2,
-    type: 'analysis',
-    file: 'customer_data.csv',
-    user: 'Jane Smith',
-    time: '15 minutes ago',
-    status: 'success'
-  },
-  {
-    id: 3,
-    type: 'upload',
-    file: 'inventory.json',
-    user: 'Mike Johnson',
-    time: '1 hour ago',
-    status: 'processing'
-  },
-  {
-    id: 4,
-    type: 'analysis',
-    file: 'sales_data.xlsx',
-    user: 'Sarah Wilson',
-    time: '2 hours ago',
-    status: 'success'
-  },
-  {
-    id: 5,
-    type: 'upload',
-    file: 'marketing.csv',
-    user: 'Alex Brown',
-    time: '3 hours ago',
-    status: 'failed'
+  fileTypeBreakdown: Record<string, number>
+  monthlyTrend: Array<{ month: string; uploads: number }>
+  sizeDistribution: {
+    small: number
+    medium: number
+    large: number
   }
-]
+  datasets: Dataset[]
+}
+
+
 
 const DashboardPage = () => {
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const handleRefresh = () => {
+  // Fetch analytics data on component mount
+  useEffect(() => {
+    fetchAnalyticsData()
+  }, [])
+
+  const fetchAnalyticsData = async () => {
+    try {
+      setLoading(true)
+      const response = await axios.get('/api/analytics')
+      setAnalyticsData(response.data)
+    } catch (error) {
+      console.error('Error fetching analytics data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleRefresh = async () => {
     setIsRefreshing(true)
-    setTimeout(() => setIsRefreshing(false), 2000)
+    await fetchAnalyticsData()
+    setIsRefreshing(false)
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (!bytes || bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
   }
 
   const getFileIcon = (type: string) => {
-    switch (type) {
+    switch (type.toLowerCase()) {
       case 'csv':
         return <FileText className="h-4 w-4 text-blue-500" />
-      case 'excel':
+      case 'xlsx':
+      case 'xls':
         return <FileSpreadsheet className="h-4 w-4 text-green-500" />
       case 'json':
         return <FileJson className="h-4 w-4 text-yellow-500" />
       default:
-        return <FileText className="h-4 w-4 text-muted-foreground" />
+        return <FileText className="h-4 w-4 text-gray-500" />
     }
   }
+
+
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -191,13 +137,26 @@ const DashboardPage = () => {
     }
   }
 
-  const totalFiles = mockFiles.length
-  const processedFiles = mockFiles.filter(f => f.status === 'processed').length
-  const totalRecords = mockFiles.reduce((sum, file) => sum + file.records, 0)
-  const storageUsed = mockFiles.reduce((sum, file) => {
-    const size = parseFloat(file.size.replace(/[^\d.]/g, ''))
-    return sum + (file.size.includes('MB') ? size : size / 1024)
-  }, 0)
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-muted-foreground">Loading dashboard...</div>
+      </div>
+    )
+  }
+
+  if (!analyticsData) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-muted-foreground">No data available</div>
+      </div>
+    )
+  }
+
+  const totalFiles = analyticsData.overview.totalFiles
+  const processedFiles = analyticsData.overview.processedFiles
+  const totalRecords = analyticsData.overview.totalRecords
+  const storageUsed = analyticsData.overview.totalSize / (1024 * 1024) // Convert to MB
 
   return (
     <div className="space-y-6">
@@ -311,7 +270,7 @@ const DashboardPage = () => {
               </CardHeader>
               <CardContent className="pl-2">
                 <ResponsiveContainer width="100%" height={350}>
-                  <AreaChart data={dataUsageData}>
+                  <AreaChart data={analyticsData.monthlyTrend}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
@@ -319,19 +278,10 @@ const DashboardPage = () => {
                     <Legend />
                     <Area 
                       type="monotone" 
-                      dataKey="files" 
-                      stackId="1" 
+                      dataKey="uploads" 
                       stroke="#3b82f6" 
                       fill="#3b82f6" 
-                      name="Files"
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="records" 
-                      stackId="2" 
-                      stroke="#10b981" 
-                      fill="#10b981" 
-                      name="Records (K)"
+                      name="Uploads"
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -350,7 +300,11 @@ const DashboardPage = () => {
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
-                      data={fileTypeData}
+                      data={Object.entries(analyticsData.fileTypeBreakdown).map(([type, count]) => ({
+                        name: type.toUpperCase(),
+                        value: count,
+                        color: type === 'csv' ? '#3b82f6' : type === 'xlsx' ? '#10b981' : '#f59e0b'
+                      }))}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
@@ -359,8 +313,11 @@ const DashboardPage = () => {
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {fileTypeData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      {Object.entries(analyticsData.fileTypeBreakdown).map(([type, count], index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={type === 'csv' ? '#3b82f6' : type === 'xlsx' ? '#10b981' : '#f59e0b'} 
+                        />
                       ))}
                     </Pie>
                     <Tooltip />
@@ -379,18 +336,10 @@ const DashboardPage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={processingTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="day" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="processed" fill="#10b981" name="Processed" />
-                  <Bar dataKey="failed" fill="#ef4444" name="Failed" />
-                  <Bar dataKey="pending" fill="#f59e0b" name="Pending" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="text-center py-8 text-muted-foreground">
+                <BarChart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Processing performance data will be available soon.</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -413,29 +362,27 @@ const DashboardPage = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {mockFiles.map((file) => (
+                {analyticsData.datasets.slice(0, 5).map((file) => (
                   <div
                     key={file.id}
                     className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex items-center gap-4">
-                      {getFileIcon(file.type)}
+                      {getFileIcon(file.fileType)}
                       <div>
                         <h4 className="font-medium">{file.name}</h4>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>{file.size}</span>
+                          <span>{formatFileSize(file.fileSize)}</span>
                           <span>{file.records.toLocaleString()} records</span>
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {file.uploadedAt}
+                            {new Date(file.createdAt).toLocaleDateString()}
                           </span>
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <Badge 
-                        variant={file.status === 'processed' ? 'default' : file.status === 'processing' ? 'secondary' : 'destructive'}
-                      >
+                      <Badge variant="default">
                         {file.status}
                       </Badge>
                       <div className="flex gap-2">
@@ -548,33 +495,9 @@ const DashboardPage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {recentActivity.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex items-center gap-4 p-3 border rounded-lg"
-                  >
-                    {getStatusIcon(activity.status)}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{activity.user}</span>
-                        <span className="text-muted-foreground">
-                          {activity.type === 'upload' ? 'uploaded' : 'analyzed'}
-                        </span>
-                        <span className="font-medium">{activity.file}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        {activity.time}
-                      </div>
-                    </div>
-                    <Badge 
-                      variant={activity.status === 'success' ? 'default' : activity.status === 'processing' ? 'secondary' : 'destructive'}
-                    >
-                      {activity.status}
-                    </Badge>
-                  </div>
-                ))}
+              <div className="text-center py-8 text-muted-foreground">
+                <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Recent activity data will be available soon.</p>
               </div>
             </CardContent>
           </Card>

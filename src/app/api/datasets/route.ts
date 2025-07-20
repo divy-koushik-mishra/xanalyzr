@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
       "text/csv",
       "application/vnd.ms-excel",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/json",
     ];
 
     if (!allowedTypes.includes(file.type)) {
