@@ -42,6 +42,7 @@ import {
   XCircle,
   RefreshCw
 } from "lucide-react"
+import axios from 'axios'
 
 // Mock data for dashboard
 const mockFiles = [
@@ -155,6 +156,10 @@ const recentActivity = [
     status: 'failed'
   }
 ]
+
+const dataSets = await axios.get('/api/upload')
+
+console.log(dataSets)
 
 const DashboardPage = () => {
   const [isRefreshing, setIsRefreshing] = useState(false)
