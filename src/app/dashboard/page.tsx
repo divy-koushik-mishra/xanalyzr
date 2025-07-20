@@ -157,10 +157,6 @@ const recentActivity = [
   }
 ]
 
-const dataSets = await axios.get('/api/datasets')
-
-console.log(dataSets)
-
 const DashboardPage = () => {
   const [isRefreshing, setIsRefreshing] = useState(false)
 
