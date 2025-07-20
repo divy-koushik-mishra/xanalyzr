@@ -3,7 +3,7 @@ import { v2 as cloudinary } from 'cloudinary'
 export async function uploadToCloudinary(buffer: Buffer, filename: string): Promise<{ url: string; publicId: string }> {
   // Configure Cloudinary
   cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
   })
@@ -31,5 +31,26 @@ export async function uploadToCloudinary(buffer: Buffer, filename: string): Prom
     )
 
     uploadStream.end(buffer)
+  })
+}
+
+export async function deleteFromCloudinary(publicId: string): Promise<boolean> {
+  // Configure Cloudinary
+  cloudinary.config({
+    cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  })
+
+  return new Promise((resolve, reject) => {
+    cloudinary.uploader.destroy(publicId, { resource_type: 'raw' }, (error, result) => {
+      if (error) {
+        console.error('Cloudinary delete error:', error)
+        reject(error)
+      } else {
+        console.log('Cloudinary delete result:', result)
+        resolve(true)
+      }
+    })
   })
 } 

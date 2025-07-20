@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import axios from 'axios'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -25,72 +26,61 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
-// Mock data for uploaded files
-const mockFiles = [
-  {
-    id: 1,
-    name: "sales_data_2024.csv",
-    type: "csv",
-    size: "2.4 MB",
-    uploadedAt: "2024-01-15",
-    lastModified: "2024-01-15",
-    status: "processed",
-    records: 15420
-  },
-  {
-    id: 2,
-    name: "customer_analytics.xlsx",
-    type: "excel",
-    size: "1.8 MB",
-    uploadedAt: "2024-01-14",
-    lastModified: "2024-01-14",
-    status: "processed",
-    records: 8920
-  },
-  {
-    id: 3,
-    name: "product_inventory.json",
-    type: "json",
-    size: "856 KB",
-    uploadedAt: "2024-01-13",
-    lastModified: "2024-01-13",
-    status: "processing",
-    records: 3240
-  },
-  {
-    id: 4,
-    name: "marketing_campaign.csv",
-    type: "csv",
-    size: "3.1 MB",
-    uploadedAt: "2024-01-12",
-    lastModified: "2024-01-12",
-    status: "processed",
-    records: 21850
-  },
-  {
-    id: 5,
-    name: "financial_reports.xlsx",
-    type: "excel",
-    size: "4.2 MB",
-    uploadedAt: "2024-01-11",
-    lastModified: "2024-01-11",
-    status: "error",
-    records: 0
-  }
-]
+// Types for dataset
+interface Dataset {
+  _id: string
+  name: string
+  fileType: string
+  fileSize: number
+  columns: string[]
+  rows: Record<string, unknown>[]
+  cloudinaryUrl: string
+  createdAt: string
+}
 
 const DataPage = () => {
-  const [files, setFiles] = useState(mockFiles)
+  const [datasets, setDatasets] = useState<Dataset[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedFiles, setSelectedFiles] = useState<number[]>([])
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false)
+  const [fileToDelete, setFileToDelete] = useState<string | null>(null)
+
+  // Fetch datasets on component mount
+  useEffect(() => {
+    fetchDatasets()
+  }, [])
+
+  const fetchDatasets = async () => {
+    try {
+      const response = await axios.get('/api/datasets')
+      setDatasets(response.data.datasets || [])
+    } catch (error) {
+      console.error('Error fetching datasets:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const getFileIcon = (type: string) => {
-    switch (type) {
+    switch (type.toLowerCase()) {
       case 'csv':
         return <FileText className="h-5 w-5 text-blue-500" />
-      case 'excel':
+      case 'xlsx':
+      case 'xls':
         return <FileSpreadsheet className="h-5 w-5 text-green-500" />
       case 'json':
         return <FileJson className="h-5 w-5 text-yellow-500" />
@@ -99,66 +89,214 @@ const DataPage = () => {
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'processed':
-        return <Badge variant="default" className="bg-green-100 text-green-800">Processed</Badge>
-      case 'processing':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Processing</Badge>
-      case 'error':
-        return <Badge variant="destructive">Error</Badge>
-      default:
-        return <Badge variant="outline">Unknown</Badge>
-    }
+  const getStatusBadge = () => {
+    // For now, all datasets are considered processed since they're in the database
+    return <Badge variant="default" className="bg-green-100 text-green-800">Processed</Badge>
   }
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const formatFileSize = (bytes: number) => {
+    if (!bytes || bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+  }
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
       setUploading(true)
-      // Simulate upload process
-      setTimeout(() => {
-        const newFile = {
-          id: Date.now(),
-          name: file.name,
-          type: file.name.split('.').pop()?.toLowerCase() || 'unknown',
-          size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-          uploadedAt: new Date().toISOString().split('T')[0],
-          lastModified: new Date().toISOString().split('T')[0],
-          status: 'processing' as const,
-          records: Math.floor(Math.random() * 20000) + 1000
+      
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+
+        await axios.post('/api/datasets', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        })
+
+        // Refresh the datasets list
+        await fetchDatasets()
+      } catch (error) {
+        console.error('Upload error:', error)
+        if (axios.isAxiosError(error) && error.response?.data?.error) {
+          alert(`Upload failed: ${error.response.data.error}`)
+        } else {
+          alert('Upload failed. Please try again.')
         }
-        setFiles([newFile, ...files])
+      } finally {
         setUploading(false)
-        // Simulate processing completion
-        setTimeout(() => {
-          setFiles(prev => prev.map(f => 
-            f.id === newFile.id ? { ...f, status: 'processed' as const } : f
-          ))
-        }, 3000)
-      }, 2000)
+        // Clear the input
+        event.target.value = ''
+      }
     }
   }
 
-  const handleDeleteFile = (fileId: number) => {
-    setFiles(files.filter(file => file.id !== fileId))
-    setSelectedFiles(selectedFiles.filter(id => id !== fileId))
+  const handleDeleteFile = async (fileId: string) => {
+    setFileToDelete(fileId)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDeleteFile = async () => {
+    if (!fileToDelete) return
+
+    try {
+      await axios.delete(`/api/datasets/${fileToDelete}`)
+      
+      // Remove from local state
+      setDatasets(datasets.filter(dataset => dataset._id !== fileToDelete))
+      setSelectedFiles(selectedFiles.filter(id => id !== fileToDelete))
+    } catch (error) {
+      console.error('Delete error:', error)
+      if (axios.isAxiosError(error) && error.response?.data?.error) {
+        alert(`Delete failed: ${error.response.data.error}`)
+      } else {
+        alert('Delete failed. Please try again.')
+      }
+    } finally {
+      setDeleteDialogOpen(false)
+      setFileToDelete(null)
+    }
   }
 
   const handleBulkDelete = () => {
-    setFiles(files.filter(file => !selectedFiles.includes(file.id)))
-    setSelectedFiles([])
+    setBulkDeleteDialogOpen(true)
   }
 
-  const filteredFiles = files.filter(file =>
-    file.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const confirmBulkDelete = async () => {
+    try {
+      await axios.post('/api/datasets/bulk-delete', {
+        datasetIds: selectedFiles
+      })
+      
+      // Remove from local state
+      setDatasets(datasets.filter(dataset => !selectedFiles.includes(dataset._id)))
+      setSelectedFiles([])
+    } catch (error) {
+      console.error('Bulk delete error:', error)
+      if (axios.isAxiosError(error) && error.response?.data?.error) {
+        alert(`Bulk delete failed: ${error.response.data.error}`)
+      } else {
+        alert('Bulk delete failed. Please try again.')
+      }
+    } finally {
+      setBulkDeleteDialogOpen(false)
+    }
+  }
+
+  const filteredDatasets = datasets.filter(dataset =>
+    dataset.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const toggleFileSelection = (fileId: number) => {
+  const toggleFileSelection = (fileId: string) => {
     setSelectedFiles(prev =>
       prev.includes(fileId)
         ? prev.filter(id => id !== fileId)
         : [...prev, fileId]
+    )
+  }
+
+  const handleDownloadFile = async (dataset: Dataset) => {
+    try {
+      // Get the dataset data
+      const response = await axios.get(`/api/datasets/${dataset._id}`)
+      const datasetData = response.data.dataset
+
+      // Convert data to appropriate format based on file type
+      let content: string
+      let filename: string
+
+      if (dataset.fileType.toLowerCase() === 'csv') {
+        // Convert to CSV
+        const headers = datasetData.columns.join(',')
+        
+        // Ensure rows is an array and handle different data structures
+        let rows = datasetData.rows
+        if (!Array.isArray(rows)) {
+          // If rows is not an array, try to convert it
+          if (typeof rows === 'object' && rows !== null) {
+            // If it's an object with numeric keys, convert to array
+            const keys = Object.keys(rows).sort((a, b) => parseInt(a) - parseInt(b))
+            rows = keys.map(key => rows[key])
+          } else {
+            // If it's not an object or is null, use empty array
+            rows = []
+          }
+        }
+        
+        const csvRows = rows.map((row: Record<string, unknown>) => 
+          datasetData.columns.map((col: string) => {
+            const value = row[col]
+            // Escape quotes and wrap in quotes if contains comma or newline
+            const stringValue = String(value || '')
+            if (stringValue.includes(',') || stringValue.includes('\n') || stringValue.includes('"')) {
+              return `"${stringValue.replace(/"/g, '""')}"`
+            }
+            return stringValue
+          }).join(',')
+        ).join('\n')
+        content = `${headers}\n${csvRows}`
+        filename = dataset.name.endsWith('.csv') ? dataset.name : `${dataset.name}.csv`
+      } else if (dataset.fileType.toLowerCase() === 'json') {
+        // Convert to JSON
+        let rows = datasetData.rows
+        if (!Array.isArray(rows)) {
+          // If rows is not an array, try to convert it
+          if (typeof rows === 'object' && rows !== null) {
+            // If it's an object with numeric keys, convert to array
+            const keys = Object.keys(rows).sort((a, b) => parseInt(a) - parseInt(b))
+            rows = keys.map(key => rows[key])
+          } else {
+            // If it's not an object or is null, use empty array
+            rows = []
+          }
+        }
+        content = JSON.stringify(rows, null, 2)
+        filename = dataset.name.endsWith('.json') ? dataset.name : `${dataset.name}.json`
+      } else {
+        // For Excel files, we'll download the original file from Cloudinary
+        const cloudinaryResponse = await fetch(dataset.cloudinaryUrl)
+        const blob = await cloudinaryResponse.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = dataset.name
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        window.URL.revokeObjectURL(url)
+        return
+      }
+
+      // Create and download the file
+      const blob = new Blob([content], { 
+        type: dataset.fileType.toLowerCase() === 'csv' ? 'text/csv' : 'application/json' 
+      })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Download error:', error)
+      if (axios.isAxiosError(error) && error.response?.data?.error) {
+        alert(`Download failed: ${error.response.data.error}`)
+      } else {
+        alert('Download failed. Please try again.')
+      }
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-muted-foreground">Loading datasets...</div>
+      </div>
     )
   }
 
@@ -203,9 +341,9 @@ const DataPage = () => {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{files.length}</div>
+            <div className="text-2xl font-bold">{datasets.length}</div>
             <p className="text-xs text-muted-foreground">
-              +2 from last week
+              Uploaded datasets
             </p>
           </CardContent>
         </Card>
@@ -217,7 +355,7 @@ const DataPage = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {files.reduce((sum, file) => sum + file.records, 0).toLocaleString()}
+              {datasets.reduce((sum, dataset) => sum + (dataset.rows?.length || 0), 0).toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
               Across all files
@@ -231,9 +369,7 @@ const DataPage = () => {
             <Eye className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {files.filter(f => f.status === 'processed').length}
-            </div>
+            <div className="text-2xl font-bold">{datasets.length}</div>
             <p className="text-xs text-muted-foreground">
               Ready for analysis
             </p>
@@ -246,9 +382,11 @@ const DataPage = () => {
             <HardDrive className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12.4 GB</div>
+            <div className="text-2xl font-bold">
+              {formatFileSize(datasets.reduce((sum, dataset) => sum + (dataset.fileSize || 0), 0))}
+            </div>
             <p className="text-xs text-muted-foreground">
-              Of 50 GB available
+              Total file size
             </p>
           </CardContent>
         </Card>
@@ -292,44 +430,49 @@ const DataPage = () => {
 
           {/* Files Table */}
           <div className="space-y-2">
-            {filteredFiles.length === 0 ? (
+            {filteredDatasets.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No files found. Upload your first file to get started.</p>
               </div>
             ) : (
-              filteredFiles.map((file) => (
+              filteredDatasets.map((dataset) => (
                 <div
-                  key={file.id}
+                  key={dataset._id}
                   className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                 >
                   <input
                     type="checkbox"
-                    checked={selectedFiles.includes(file.id)}
-                    onChange={() => toggleFileSelection(file.id)}
+                    checked={selectedFiles.includes(dataset._id)}
+                    onChange={() => toggleFileSelection(dataset._id)}
                     className="rounded"
                   />
                   
                   <div className="flex items-center gap-3 flex-1">
-                    {getFileIcon(file.type)}
+                    {getFileIcon(dataset.fileType)}
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <h4 className="font-medium">{file.name}</h4>
-                        {getStatusBadge(file.status)}
+                        <h4 className="font-medium">{dataset.name}</h4>
+                        {getStatusBadge()}
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>{file.size}</span>
-                        <span>{file.records.toLocaleString()} records</span>
+                        <span>{formatFileSize(dataset.fileSize || 0)}</span>
+                        <span>{(dataset.rows?.length || 0).toLocaleString()} records</span>
+                        <span>{dataset.columns?.length || 0} columns</span>
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          {file.uploadedAt}
+                          {new Date(dataset.createdAt).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleDownloadFile(dataset)}
+                    >
                       <Download className="h-4 w-4" />
                     </Button>
                     <DropdownMenu>
@@ -343,13 +486,13 @@ const DataPage = () => {
                           <Eye className="h-4 w-4 mr-2" />
                           View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDownloadFile(dataset)}>
                           <Download className="h-4 w-4 mr-2" />
                           Download
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-red-600"
-                          onClick={() => handleDeleteFile(file.id)}
+                          onClick={() => handleDeleteFile(dataset._id)}
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
                           Delete
@@ -363,6 +506,48 @@ const DataPage = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Delete File Alert Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete File</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this file? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteFile}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Alert Dialog */}
+      <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Multiple Files</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedFiles.length} file(s)? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmBulkDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

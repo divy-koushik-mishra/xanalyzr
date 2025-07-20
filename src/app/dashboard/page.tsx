@@ -157,7 +157,7 @@ const recentActivity = [
   }
 ]
 
-const dataSets = await axios.get('/api/upload')
+const dataSets = await axios.get('/api/datasets')
 
 console.log(dataSets)
 
