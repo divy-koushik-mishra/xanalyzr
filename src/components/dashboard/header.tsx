@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Bell, Search, Sun, Moon, User, Settings } from "lucide-react"
+import { Bell, Search, Sun, Moon } from "lucide-react"
 import { useTheme } from "next-themes"
 import { UserButton, useUser, SignInButton } from "@clerk/nextjs"
 
@@ -49,43 +49,22 @@ export function Header({ mobileNav }: HeaderProps) {
           <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           <span className="sr-only">Toggle theme</span>
         </Button>
-
-        {/* Notifications - Only show for signed in users */}
-        {isSignedIn && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="icon" className="relative">
                 <Bell className="h-4 w-4" />
-                <Badge className="absolute -right-1 -top-1 h-4 w-4 p-0 text-xs">
-                  3
-                </Badge>
+                {/* Notification badge removed since notifications are not dynamic */}
                 <span className="sr-only">Toggle notifications</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80">
               <DropdownMenuLabel>Notifications</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium">New user registered</p>
-                  <p className="text-xs text-muted-foreground">2 minutes ago</p>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium">Order #1234 completed</p>
-                  <p className="text-xs text-muted-foreground">1 hour ago</p>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium">System backup completed</p>
-                  <p className="text-xs text-muted-foreground">3 hours ago</p>
-                </div>
-              </DropdownMenuItem>
+              <div className="py-8 text-center text-muted-foreground text-sm">
+                No notifications available
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
-        )}
 
         {/* User Authentication */}
         {isLoaded && (

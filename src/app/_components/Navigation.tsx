@@ -51,14 +51,17 @@ export default function Navigation({ menuVariant }: NavigationProps) {
               About
             </a>
             <SignedOut>
-              <SignUpButton>
-                <button className="bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition-colors duration-300 border border-slate-700 cursor-pointer font-medium">
+              <SignUpButton mode="modal" signInFallbackRedirectUrl="/dashboard">
+                {/* <button className="bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition-colors duration-300 border border-slate-700 cursor-pointer font-medium">
                   Sign In
-                </button>
-              </SignUpButton>
-              <button className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 cursor-pointer shadow-lg hover:shadow-purple-500/25">
+                </button> */}
+                <button className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 cursor-pointer shadow-lg hover:shadow-purple-500/25">
                 Get Started
               </button>
+              </SignUpButton>
+              {/* <button className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 cursor-pointer shadow-lg hover:shadow-purple-500/25">
+                Get Started
+              </button> */}
             </SignedOut>
             <SignedIn>
             <Link href="/dashboard" className="bg-gradient-to-r flex items-center gap-2 from-purple-600 to-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 cursor-pointer shadow-lg hover:shadow-purple-500/25">
@@ -112,12 +115,21 @@ export default function Navigation({ menuVariant }: NavigationProps) {
               >
                 About
               </a>
-              <button className="w-full bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition-colors duration-300 border border-slate-700 cursor-pointer font-medium">
+              {/* <button className="w-full bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition-colors duration-300 border border-slate-700 cursor-pointer font-medium">
                 Sign In
-              </button>
-              <button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-300 cursor-pointer shadow-lg">
-                Get Started
-              </button>
+              </button> */}
+              <SignedOut>
+                <SignUpButton mode="modal" signInFallbackRedirectUrl="/dashboard">
+                  <button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-300 cursor-pointer shadow-lg">
+                    Get Started
+                  </button>
+                </SignUpButton>
+              </SignedOut>
+              <SignedIn>
+                <Link href="/dashboard" className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-300 cursor-pointer shadow-lg">
+                  Dashboard
+                </Link>
+              </SignedIn>
             </div>
           </motion.div>
         )}

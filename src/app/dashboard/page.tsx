@@ -158,6 +158,37 @@ const DashboardPage = () => {
   const totalRecords = analyticsData.overview.totalRecords
   const storageUsed = analyticsData.overview.totalSize / (1024 * 1024) // Convert to MB
 
+  // Empty state for new users
+  if (totalFiles === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[70vh] text-center space-y-8">
+        {/* Beautiful SVG illustration */}
+        <svg width="260" height="180" viewBox="0 0 260 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="20" y="40" width="220" height="120" rx="16" fill="#23272f"/>
+          <rect x="40" y="60" width="180" height="80" rx="12" fill="#2d323d"/>
+          <rect x="60" y="90" width="40" height="20" rx="4" fill="#3b82f6"/>
+          <rect x="110" y="90" width="40" height="20" rx="4" fill="#10b981"/>
+          <rect x="160" y="90" width="40" height="20" rx="4" fill="#f59e0b"/>
+          <circle cx="130" cy="70" r="10" fill="#fff" fillOpacity="0.08"/>
+          <rect x="90" y="120" width="80" height="8" rx="4" fill="#fff" fillOpacity="0.08"/>
+        </svg>
+        <div>
+          <h2 className="text-2xl font-bold mb-2">Welcome to Xanalyzr!</h2>
+          <p className="text-muted-foreground mb-4 max-w-md mx-auto">
+            Get started by uploading your first data file. Xanalyzr helps you visualize and analyze your data effortlessly. Click below to begin your data journey!
+          </p>
+          <Button 
+            size="lg" 
+            className="mt-2 px-8 py-4 text-base font-semibold"
+            onClick={() => window.location.href = '/dashboard/data'}
+          >
+            Upload Your First File
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
